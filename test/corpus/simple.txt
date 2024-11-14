@@ -1,0 +1,24 @@
+==================
+Simple
+==================
+
+1 | "a" | "a".."z"
+
+---
+
+(source_file
+  (top_level
+    (expression
+      (expression
+        (expression
+          (number))
+        (or_op)
+        (expression
+          (string)))
+      (or_op)
+      (expression
+        (expression
+          (string))
+        (range_op)
+        (expression
+          (string))))))
