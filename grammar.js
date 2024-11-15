@@ -12,8 +12,6 @@ module.exports = grammar({
 
   extras: $ => [/\s/, $.comment],
 
-  inline: $ => [$.operand, $.expression_sep],
-
   conflicts: $ => [
     [$.spread_op, $.object_spread],
     [$.range_op, $.lower_bounded_range_op],
@@ -24,35 +22,13 @@ module.exports = grammar({
 
     top_level: $ => seq($.expression, $.expression_sep),
 
-    comment: $ => token(/#[^\n]*/),
+    comment: $ => token(prec(-1, /#[^\n]*/)),
 
-    expression_sep: $ => choice(
-      ";",
-      /[^\S\n]*\n/,
-      "\0",
-    ),
+    expression_sep: $ => choice(";", "\n", "\0"),
 
-    expression: $ => choice(
-      $.operand,
-      prec(11, postfix($.expression, $.call_or_define_function)),
-      prec(10, prefix($.spread_op, $.expression)),
-      prec(9, prefix($.return_op, $.expression)),
-      prec(8, prefix($.negate_op, $.expression)),
-      prec(7, prefix($.upper_bounded_range_op, $.expression)),
-      prec(6, postfix($.expression, $.lower_bounded_range_op)),
-      prec.left(5, infix($.expression, $.range_op, $.expression)),
-      prec.left(4, infix($.expression, $.or_op, $.expression)),
-      prec.left(4, infix($.expression, $.take_right_op, $.expression)),
-      prec.left(4, infix($.expression, $.take_left_op, $.expression)),
-      prec.left(4, infix($.expression, $.merge_op, $.expression)),
-      prec.left(4, infix($.expression, $.backtrack_op, $.expression)),
-      prec.left(4, infix($.expression, $.destructure_op, $.expression)),
-      prec.left(4, infix($.expression, $.return_op, $.expression)),
-      prec.left(4, infix($.expression, $.subtract_op, $.expression)),
-      prec.left(3, infix($.expression, $.sequence_op, $.expression)),
-      prec.right(2, infix($.expression, $.conditional, $.expression)),
-      prec.right(1, infix($.expression, $.assign_op, $.expression)),
-    ),
+    expression: $ => expressionHelp($, $.operand, $.expression),
+
+    value: $ => expressionHelp($, alias($.operand, $.value_operand), $.value),
 
     spread_op: $ => "...",
     negate_op: $ => "-",
@@ -69,9 +45,10 @@ module.exports = grammar({
     subtract_op: $ => "-",
     sequence_op: $ => "&",
     assign_op: $ => "=",
+    conditional_then_op: $ => "?",
+    conditional_else_op: $ => ":",
 
     operand: $ => choice(
-      $.group,
       $.boolean,
       $.null,
       $.string,
@@ -82,8 +59,6 @@ module.exports = grammar({
       $.array,
       $.object,
     ),
-
-    group: $ => seq("(", $.expression, ")"),
 
     boolean: $ => choice("true", "false"),
 
@@ -115,7 +90,7 @@ module.exports = grammar({
 
     double_string_fragment: $ => token.immediate(prec(0, /[^\n\\"%]+/)),
 
-    single_string_fragment: $ => token.immediate(prec(0, /[^\n\\"%]+/)),
+    single_string_fragment: $ => token.immediate(prec(0, /[^\n\\'%]+/)),
 
     interpolation: $ => seq(token.immediate("%("), $.expression, ")"),
 
@@ -140,7 +115,7 @@ module.exports = grammar({
     underscore_variable: $ => token(repeat1("_")),
 
     array: $ => choice(
-      seq('[', commaSep($.expression), ']'),
+      seq('[', commaSep($.value), ']'),
     ),
 
     object: $ => seq(
@@ -153,17 +128,17 @@ module.exports = grammar({
     ),
 
     object_pair: $ => seq(
-      field('key', $.expression),
+      field('key', $.value),
       ':',
-      field('value', $.expression),
+      field('value', $.value),
     ),
 
     object_spread: $ => prec.dynamic(10, seq("...", $.expression)),
 
     conditional: $ => seq(
-      "?",
+      $.conditional_then_op,
       $.expression,
-      ":",
+      $.conditional_else_op,
     ),
 
     call_or_define_function: $ => seq(
@@ -173,6 +148,31 @@ module.exports = grammar({
     ),
   }
 });
+
+function expressionHelp($, operand_rule, exp_rule) {
+  return choice(
+    operand_rule,
+    seq("(", exp_rule, ")"),
+    prec(11, postfix(exp_rule, $.call_or_define_function)),
+    prec(10, prefix($.spread_op, exp_rule)),
+    prec(9, prefix($.return_op, $.value)),
+    prec(8, prefix($.negate_op, exp_rule)),
+    prec(7, prefix($.upper_bounded_range_op, exp_rule)),
+    prec(6, postfix(exp_rule, $.lower_bounded_range_op)),
+    prec.left(5, infix(exp_rule, $.range_op, exp_rule)),
+    prec.left(4, infix(exp_rule, $.or_op, exp_rule)),
+    prec.left(4, infix(exp_rule, $.take_right_op, exp_rule)),
+    prec.left(4, infix(exp_rule, $.take_left_op, exp_rule)),
+    prec.left(4, infix(exp_rule, $.merge_op, exp_rule)),
+    prec.left(4, infix(exp_rule, $.backtrack_op, exp_rule)),
+    prec.left(4, infix(exp_rule, $.destructure_op, $.value)),
+    prec.left(4, infix(exp_rule, $.return_op, $.value)),
+    prec.left(4, infix(exp_rule, $.subtract_op, exp_rule)),
+    prec.left(3, infix(exp_rule, $.sequence_op, exp_rule)),
+    prec.right(2, infix(exp_rule, $.conditional, exp_rule)),
+    prec.right(1, infix(exp_rule, $.assign_op, exp_rule)),
+  );
+}
 
 /**
  * Creates a rule to match one or more of the rules separated by a comma

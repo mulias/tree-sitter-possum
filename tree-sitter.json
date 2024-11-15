@@ -5,8 +5,13 @@
       "camelcase": "Possum",
       "scope": "source.possum",
       "path": ".",
-      "file-types": null,
-      "injection-regex": "^possum$"
+      "file-types": [
+        "possum"
+      ],
+      "injection-regex": "^possum$",
+      "highlights": [
+        "queries/highlights.scm"
+      ]
     }
   ],
   "metadata": {
