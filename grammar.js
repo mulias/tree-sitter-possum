@@ -18,17 +18,77 @@ module.exports = grammar({
   ],
 
   rules: {
-    source_file: $ => repeat($.top_level),
+    source_file: $ => repeat($.statement),
 
-    top_level: $ => seq($.expression, $.expression_sep),
+    statement: $ => choice($.parser_def, $.value_def, $.main_parser),
+
+    parser_def: $ => prec(20, seq(
+      field("name", $.parser_variable),
+      optional(field("params", alias($.parser_fn_args_or_params, $.parser_fn_params))),
+      $.assign_op,
+      field("body", $.expression),
+      $.expression_sep,
+    )),
+
+    value_def: $ => prec(20, seq(
+      field("name", $.value_variable),
+      optional(field("params", alias($.value_fn_args_or_params, $.value_fn_params))),
+      $.assign_op,
+      field("body", $.value),
+      $.expression_sep,
+    )),
+
+    main_parser: $ => seq($.expression, $.expression_sep),
 
     comment: $ => token(prec(-1, /#[^\n]*/)),
 
     expression_sep: $ => choice(";", "\n", "\0"),
 
-    expression: $ => expressionHelp($, $.operand, $.expression),
+    expression: $ => choice(
+      $.operand,
+      seq("(", $.expression, ")"),
+      prec(12, postfix($.value_variable, alias($.value_fn_args_or_params, $.call_value_function))),
+      prec(11, postfix($.expression, alias($.parser_fn_args_or_params, $.call_parser_function))),
+      prec(10, prefix($.spread_op, $.expression)),
+      prec(9, prefix($.return_op, $.value)),
+      prec(8, prefix($.negate_op, $.expression)),
+      prec(7, prefix($.upper_bounded_range_op, $.expression)),
+      prec(6, postfix($.expression, $.lower_bounded_range_op)),
+      prec.left(5, infix($.expression, $.range_op, $.expression)),
+      prec.left(4, infix($.expression, $.or_op, $.expression)),
+      prec.left(4, infix($.expression, $.take_right_op, $.expression)),
+      prec.left(4, infix($.expression, $.take_left_op, $.expression)),
+      prec.left(4, infix($.expression, $.merge_op, $.expression)),
+      prec.left(4, infix($.expression, $.backtrack_op, $.expression)),
+      prec.left(4, infix($.expression, $.destructure_op, $.value)),
+      prec.left(4, infix($.expression, $.return_op, $.value)),
+      prec.left(4, infix($.expression, $.subtract_op, $.expression)),
+      prec.left(3, infix($.expression, $.sequence_op, $.expression)),
+      prec.right(2, infix($.expression, $.conditional, $.expression)),
+    ),
 
-    value: $ => expressionHelp($, alias($.operand, $.value_operand), $.value),
+    value: $ => choice(
+      $.value_operand,
+      seq("(", $.value, ")"),
+      prec(12, postfix($.value_variable, alias($.value_fn_args_or_params, $.call_value_function))),
+      prec(11, postfix($.value, alias($.parser_fn_args_or_params, $.call_parser_function))),
+      prec(10, prefix($.spread_op, $.value)),
+      prec(9, prefix($.return_op, $.value)),
+      prec(8, prefix($.negate_op, $.value)),
+      prec(7, prefix($.upper_bounded_range_op, $.value)),
+      prec(6, postfix($.value, $.lower_bounded_range_op)),
+      prec.left(5, infix($.value, $.range_op, $.value)),
+      prec.left(4, infix($.value, $.or_op, $.value)),
+      prec.left(4, infix($.value, $.take_right_op, $.value)),
+      prec.left(4, infix($.value, $.take_left_op, $.value)),
+      prec.left(4, infix($.value, $.merge_op, $.value)),
+      prec.left(4, infix($.value, $.backtrack_op, $.value)),
+      prec.left(4, infix($.value, $.destructure_op, $.value)),
+      prec.left(4, infix($.value, $.return_op, $.value)),
+      prec.left(4, infix($.value, $.subtract_op, $.value)),
+      prec.left(3, infix($.value, $.sequence_op, $.value)),
+      prec.right(2, infix($.value, $.value_conditional, $.value)),
+    ),
 
     spread_op: $ => "...",
     negate_op: $ => "-",
@@ -52,6 +112,18 @@ module.exports = grammar({
       $.boolean,
       $.null,
       $.string,
+      $.number,
+      $.parser_variable,
+      $.value_variable,
+      $.underscore_variable,
+      $.array,
+      $.object,
+    ),
+
+    value_operand: $ => choice(
+      $.boolean,
+      $.null,
+      alias($.value_string, $.string),
       $.number,
       $.parser_variable,
       $.value_variable,
@@ -88,11 +160,37 @@ module.exports = grammar({
       seq("`", repeat(token.immediate(prec(0, /[^\n`]/))), "`"),
     ),
 
+    value_string: $ => choice(
+      seq(
+        '"',
+        repeat(choice(
+          alias($.double_string_fragment, $.string_fragment),
+          alias($.value_interpolation, $.interpolation),
+          $.escape_char,
+          $.escape_unicode,
+        )),
+        '"',
+      ),
+      seq(
+        "'",
+        repeat(choice(
+          alias($.single_string_fragment, $.string_fragment),
+          alias($.value_interpolation, $.interpolation),
+          $.escape_char,
+          $.escape_unicode,
+        )),
+        "'",
+      ),
+      seq("`", repeat(token.immediate(prec(0, /[^\n`]/))), "`"),
+    ),
+
     double_string_fragment: $ => token.immediate(prec(0, /[^\n\\"%]+/)),
 
     single_string_fragment: $ => token.immediate(prec(0, /[^\n\\'%]+/)),
 
     interpolation: $ => seq(token.immediate("%("), $.expression, ")"),
+
+    value_interpolation: $ => seq(token.immediate("%("), $.value, ")"),
 
     escape_char: $ => token.immediate(prec(1, /\\[\\"\'ntbrafv0%]/)),
 
@@ -115,7 +213,7 @@ module.exports = grammar({
     underscore_variable: $ => token(repeat1("_")),
 
     array: $ => choice(
-      seq('[', commaSep($.value), ']'),
+      seq('[', commaSep($.value), optional(","), ']'),
     ),
 
     object: $ => seq(
@@ -124,6 +222,7 @@ module.exports = grammar({
         $.object_pair,
         $.object_spread,
       )),
+      optional(","),
       '}',
     ),
 
@@ -141,38 +240,17 @@ module.exports = grammar({
       $.conditional_else_op,
     ),
 
-    call_or_define_function: $ => seq(
-      "(",
-      commaSep($.expression),
-      ")",
+    value_conditional: $ => seq(
+      $.conditional_then_op,
+      $.value,
+      $.conditional_else_op,
     ),
+
+    parser_fn_args_or_params: $ => seq("(", commaSep($.expression), optional(","), ")"),
+
+    value_fn_args_or_params: $ => seq("(", commaSep($.value), optional(","), ")"),
   }
 });
-
-function expressionHelp($, operand_rule, exp_rule) {
-  return choice(
-    operand_rule,
-    seq("(", exp_rule, ")"),
-    prec(11, postfix(exp_rule, $.call_or_define_function)),
-    prec(10, prefix($.spread_op, exp_rule)),
-    prec(9, prefix($.return_op, $.value)),
-    prec(8, prefix($.negate_op, exp_rule)),
-    prec(7, prefix($.upper_bounded_range_op, exp_rule)),
-    prec(6, postfix(exp_rule, $.lower_bounded_range_op)),
-    prec.left(5, infix(exp_rule, $.range_op, exp_rule)),
-    prec.left(4, infix(exp_rule, $.or_op, exp_rule)),
-    prec.left(4, infix(exp_rule, $.take_right_op, exp_rule)),
-    prec.left(4, infix(exp_rule, $.take_left_op, exp_rule)),
-    prec.left(4, infix(exp_rule, $.merge_op, exp_rule)),
-    prec.left(4, infix(exp_rule, $.backtrack_op, exp_rule)),
-    prec.left(4, infix(exp_rule, $.destructure_op, $.value)),
-    prec.left(4, infix(exp_rule, $.return_op, $.value)),
-    prec.left(4, infix(exp_rule, $.subtract_op, exp_rule)),
-    prec.left(3, infix(exp_rule, $.sequence_op, exp_rule)),
-    prec.right(2, infix(exp_rule, $.conditional, exp_rule)),
-    prec.right(1, infix(exp_rule, $.assign_op, exp_rule)),
-  );
-}
 
 /**
  * Creates a rule to match one or more of the rules separated by a comma

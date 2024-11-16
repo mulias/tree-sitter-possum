@@ -20,7 +20,7 @@
     "fields": {}
   },
   {
-    "type": "call_or_define_function",
+    "type": "call_parser_function",
     "named": true,
     "fields": {},
     "children": {
@@ -29,6 +29,21 @@
       "types": [
         {
           "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "call_value_function",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "value",
           "named": true
         }
       ]
@@ -70,10 +85,6 @@
         "multiple": false,
         "required": false,
         "types": [
-          {
-            "type": "assign_op",
-            "named": true
-          },
           {
             "type": "backtrack_op",
             "named": true
@@ -127,6 +138,10 @@
           {
             "type": "expression",
             "named": true
+          },
+          {
+            "type": "value_variable",
+            "named": true
           }
         ]
       },
@@ -135,7 +150,11 @@
         "required": false,
         "types": [
           {
-            "type": "call_or_define_function",
+            "type": "call_parser_function",
+            "named": true
+          },
+          {
+            "type": "call_value_function",
             "named": true
           },
           {
@@ -212,6 +231,10 @@
         {
           "type": "expression",
           "named": true
+        },
+        {
+          "type": "value",
+          "named": true
         }
       ]
     }
@@ -220,6 +243,25 @@
     "type": "lower_bounded_range_op",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "main_parser",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        },
+        {
+          "type": "expression_sep",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "negate_op",
@@ -334,6 +376,71 @@
     }
   },
   {
+    "type": "parser_def",
+    "named": true,
+    "fields": {
+      "body": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "parser_variable",
+            "named": true
+          }
+        ]
+      },
+      "params": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "parser_fn_params",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "assign_op",
+          "named": true
+        },
+        {
+          "type": "expression_sep",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "parser_fn_params",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "range_op",
     "named": true,
     "fields": {}
@@ -348,7 +455,7 @@
       "required": false,
       "types": [
         {
-          "type": "top_level",
+          "type": "statement",
           "named": true
         }
       ]
@@ -358,6 +465,29 @@
     "type": "spread_op",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "statement",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "main_parser",
+          "named": true
+        },
+        {
+          "type": "parser_def",
+          "named": true
+        },
+        {
+          "type": "value_def",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "string",
@@ -392,25 +522,6 @@
     "fields": {}
   },
   {
-    "type": "top_level",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "expression",
-          "named": true
-        },
-        {
-          "type": "expression_sep",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "upper_bounded_range_op",
     "named": true,
     "fields": {}
@@ -424,15 +535,7 @@
         "required": false,
         "types": [
           {
-            "type": "assign_op",
-            "named": true
-          },
-          {
             "type": "backtrack_op",
-            "named": true
-          },
-          {
-            "type": "conditional",
             "named": true
           },
           {
@@ -470,6 +573,10 @@
           {
             "type": "take_right_op",
             "named": true
+          },
+          {
+            "type": "value_conditional",
+            "named": true
           }
         ]
       },
@@ -480,6 +587,10 @@
           {
             "type": "value",
             "named": true
+          },
+          {
+            "type": "value_variable",
+            "named": true
           }
         ]
       },
@@ -488,7 +599,11 @@
         "required": false,
         "types": [
           {
-            "type": "call_or_define_function",
+            "type": "call_parser_function",
+            "named": true
+          },
+          {
+            "type": "call_value_function",
             "named": true
           },
           {
@@ -540,6 +655,94 @@
         },
         {
           "type": "value_operand",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "value_conditional",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "conditional_else_op",
+          "named": true
+        },
+        {
+          "type": "conditional_then_op",
+          "named": true
+        },
+        {
+          "type": "value",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "value_def",
+    "named": true,
+    "fields": {
+      "body": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "value",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "value_variable",
+            "named": true
+          }
+        ]
+      },
+      "params": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "value_fn_params",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "assign_op",
+          "named": true
+        },
+        {
+          "type": "expression_sep",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "value_fn_params",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "value",
           "named": true
         }
       ]
